@@ -280,11 +280,157 @@
    channelUnregistered
    ```
 
-   
+## **三、Socket编程**
 
-5. 
+1. 服务端代码:
 
-6. 
+     1) 服务类启动类:
 
-   
+```Java
+public class MyServer {
+
+    //EventLoopGroup 首先是一个接口，继承了EventExecutorGroup ，主要的功能是在时间循环对Channel的注册，
+
+    public static void main(String[] args) throws Exception {
+
+        EventLoopGroup bossGroup = new NioEventLoopGroup();//第一步建立bossGroup 接受数据然后转发给workerGroup ，是一个死循环
+        EventLoopGroup workGroup = new NioEventLoopGroup();//第二步 workerGroup 完成实际数据的处理，也是一个死循环
+
+        try {
+
+            ServerBootstrap serverBootstrap = new ServerBootstrap();//第三步。启动bossGroup和workerGroup
+            serverBootstrap.group(bossGroup, workGroup).channel(NioServerSocketChannel.class)
+                    .handler(new LoggingHandler(LogLevel.WARN))
+                    .childHandler(new MyServerInitializer());
+
+            ChannelFuture channelFuture = serverBootstrap.bind(8899).sync();//第四部，指定服务端的端口。
+            channelFuture.channel().closeFuture().sync();
+
+        } finally {
+            bossGroup.shutdownGracefully().sync();
+            workGroup.shutdownGracefully().sync();
+        }
+
+    }
+}
+```
+
+```Java
+public class MyServerInitializer extends ChannelInitializer<SocketChannel> {
+
+    @Override
+    protected void initChannel(SocketChannel ch) throws Exception {
+
+        ChannelPipeline channelPipeline = ch.pipeline();
+        
+       /**
+         *
+         * @param maxFrameLength  帧的最大长度
+         * @param lengthFieldOffset length字段偏移的地址
+         * @param lengthFieldLength length字段所占的字节长
+         * @param lengthAdjustment 修改帧数据长度字段中定义的值，可以为负数 因为有时候我们习惯把头部记入长度,若为负数,则说明要推后多少个字段
+         * @param initialBytesToStrip 解析时候跳过多少个长度
+         * @param failFast 为true，当frame长度超过maxFrameLength时立即报TooLongFrameException异常，为false，读取完整个帧再报异
+         */
+        channelPipeline.addLast(new LengthFieldBasedFrameDecoder(Integer.MAX_VALUE, 0, 4, 0, 4));
+        channelPipeline.addLast(new LengthFieldPrepender(4));
+        channelPipeline.addLast(new StringDecoder(CharsetUtil.UTF_8));
+        channelPipeline.addLast(new StringEncoder(CharsetUtil.UTF_8));
+        channelPipeline.addLast(new MyServerHandler());
+
+    }
+}
+```
+
+```Java
+public class MyServerHandler extends SimpleChannelInboundHandler<String> {
+
+    @Override
+    protected void channelRead0(ChannelHandlerContext ctx, String msg) throws Exception {
+
+        System.out.println(ctx.channel().remoteAddress() + " , " + msg);
+        ctx.channel().writeAndFlush("from server: " + UUID.randomUUID());
+    }
+
+    @Override
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+        super.exceptionCaught(ctx, cause);
+        cause.printStackTrace();
+        ctx.close();
+    }
+}
+```
+
+2. 客户端代码:
+
+```Java
+public class MyClient {
+
+    public static void main(String[] args) throws Exception {
+
+        EventLoopGroup bossGroup = new NioEventLoopGroup();
+        try {
+            Bootstrap bootstrap = new Bootstrap();
+            bootstrap.group(bossGroup).channel(NioSocketChannel.class).handler(new MyClientInitializer());
+            ChannelFuture channelFuture = bootstrap.connect("127.0.0.1", 8899).sync();
+            channelFuture.channel().closeFuture().sync();
+        } finally {
+            bossGroup.shutdownGracefully();
+        }
+
+    }
+}
+
+```
+
+```java
+public class MyClientInitializer extends ChannelInitializer<SocketChannel> {
+
+    @Override
+    protected void initChannel(SocketChannel ch) throws Exception {
+        ChannelPipeline pipeline = ch.pipeline();
+
+        /**
+         *
+         * @param maxFrameLength  帧的最大长度
+         * @param lengthFieldOffset length字段偏移的地址
+         * @param lengthFieldLength length字段所占的字节长
+         * @param lengthAdjustment 修改帧数据长度字段中定义的值，可以为负数 因为有时候我们习惯把头部记入长度,若为负数,则说明要推后多少个字段
+         * @param initialBytesToStrip 解析时候跳过多少个长度
+         * @param failFast 为true，当frame长度超过maxFrameLength时立即报TooLongFrameException异常，为false，读取完整个帧再报异
+         */
+        pipeline.addLast(new LengthFieldBasedFrameDecoder(Integer.MAX_VALUE, 0, 4, 0, 4));
+        // 编码器
+        pipeline.addLast(new LengthFieldPrepender(4));
+        pipeline.addLast(new StringDecoder(CharsetUtil.UTF_8));
+        pipeline.addLast(new StringEncoder(CharsetUtil.UTF_8));
+        pipeline.addLast(new MyClientHandler());
+    }
+}
+
+```
+
+```Java
+public class MyClientHandler extends SimpleChannelInboundHandler<String> {
+
+    @Override
+    protected void channelRead0(ChannelHandlerContext ctx, String msg) throws Exception {
+        System.out.println(ctx.channel().remoteAddress());
+        System.out.println("client output: " + msg);
+        ctx.writeAndFlush("from client: " + LocalDateTime.now());
+    }
+
+    @Override
+    public void channelActive(ChannelHandlerContext ctx) throws Exception {
+        ctx.writeAndFlush("来自于客户端的问候！");
+    }
+
+    @Override
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+        cause.printStackTrace();
+        ctx.close();
+    }
+}
+
+```
 
