@@ -26,7 +26,10 @@ public class MyHttpServerHandler extends SimpleChannelInboundHandler<HttpObject>
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, HttpObject msg) throws Exception {
         // An exceptionCaught() event was fired, and it reached at the tail of the pipeline. It usually means the last handler in the pipeline did not handle the exception.
+        System.out.println(msg.getClass());
+        System.out.println(ctx.channel().remoteAddress());
         if (msg instanceof HttpRequest) {
+            System.out.println("channelRead0");
             ByteBuf content = Unpooled.copiedBuffer("Hello World", CharsetUtil.UTF_8);
             FullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,
                     HttpResponseStatus.OK, content);
@@ -34,7 +37,38 @@ public class MyHttpServerHandler extends SimpleChannelInboundHandler<HttpObject>
             response.headers().set(HttpHeaderNames.CONTENT_LENGTH, content.readableBytes());
             // 刷新到客户端
             ctx.writeAndFlush(response);
+            // 可以手动关闭
+            ctx.channel().close();
         }
     }
 
+    @Override
+    public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
+        System.out.println("channelRead0");
+        super.channelRegistered(ctx);
+    }
+
+    @Override
+    public void channelActive(ChannelHandlerContext ctx) throws Exception {
+        System.out.println("channelActive");
+        super.channelActive(ctx);
+    }
+
+    @Override
+    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+        System.out.println("handlerAdded");
+        super.handlerAdded(ctx);
+    }
+
+    @Override
+    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+        System.out.println("channelInactive");
+        super.channelInactive(ctx);
+    }
+
+    @Override
+    public void channelUnregistered(ChannelHandlerContext ctx) throws Exception {
+        System.out.println("channelUnregistered");
+        super.channelUnregistered(ctx);
+    }
 }

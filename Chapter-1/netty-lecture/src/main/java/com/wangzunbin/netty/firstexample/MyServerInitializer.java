@@ -20,6 +20,7 @@ public class MyServerInitializer extends ChannelInitializer<SocketChannel> {
         ChannelPipeline pipeline = ch.pipeline();
         // 参数1, 如果为null, netty自动给这个类加上名称, 如果有的话, 就不会自动加上名称
         // 参数2: 不能搞成单例的, 要new出来
+        // HttpServerCodec分为HttpRequestDecoder和HttpResponseEncoder, Netty一般来说分为解码和编码, 这个类已经合二为一了
         pipeline.addLast("httpServerCodec", new HttpServerCodec());
         pipeline.addLast("httpServerHandler", new MyHttpServerHandler());
     }

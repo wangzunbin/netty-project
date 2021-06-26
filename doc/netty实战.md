@@ -109,5 +109,182 @@
 
      ![image-20210623173659029](img\2-3.png)
 
-3. 找到之后, 就在我们的项目依赖进来
+3. 开发一个hello的Netty项目
+
+   ```java
+   public class MyNettyServer {
+   
+       /**
+        * 1. 为什么要创建两个NioEventLoopGroup的呢?
+        * 答: 一个也可以, 即处理与客户端的连接, 又要处理业务逻辑, 但是这样子很不友好, Netty比较推荐两个线程
+        */
+       public static void main(String[] args) throws Exception {
+           // Nio死循环, 这个是处理与客户端的请求, 主要是获取连接
+           EventLoopGroup bossGroup = new NioEventLoopGroup();
+           // NIO死循环  这个接受到客户端数据, 进行业务代码处理, 并返回给客户端
+           EventLoopGroup workerGroup = new NioEventLoopGroup();
+           try {
+               // ServerBootstrap可以理解为服务器启动的工厂类，我们可以通过它来完成服务器端的 Netty 参数初始化。
+               // 作用职责:EventLoop初始化,channel的注册过程 ,关于pipeline的初始化,handler的添加过程,服务端连接分析。
+               ServerBootstrap serverBootstrap = new ServerBootstrap();
+               serverBootstrap.group(bossGroup, workerGroup).channel(NioServerSocketChannel.class)
+                       // 添加初始化器
+                       .childHandler(new MyServerInitializer());
+               ChannelFuture channelFuture = serverBootstrap.bind(8899).sync();
+               channelFuture.channel().closeFuture().sync();
+           } finally {
+               // 优雅关闭
+               bossGroup.shutdownGracefully();
+               workerGroup.shutdownGracefully();
+           }
+       }
+   }
+   
+   ```
+
+   ```Java
+   //  连接一旦创建的时候, 就会调用这个初始化器
+   public class MyServerInitializer extends ChannelInitializer<SocketChannel> {
+   
+       @Override
+       protected void initChannel(SocketChannel ch) throws Exception {
+           ChannelPipeline pipeline = ch.pipeline();
+           // 参数1, 如果为null, netty自动给这个类加上名称, 如果有的话, 就不会自动加上名称
+           // 参数2: 不能搞成单例的, 要new出来
+           // HttpServerCodec是关键类, 这是一个http解码器, HttpServerCodec分为HttpRequestDecoder和HttpResponseEncoder, Netty一般来说分为解码和编码, 这个类已经合二为一了
+           pipeline.addLast("httpServerCodec", new HttpServerCodec());
+           pipeline.addLast("httpServerHandler", new MyHttpServerHandler());
+       }
+   
+   }
+   
+   ```
+
+   ```Java
+   // 获取客户端的数据
+   public class MyHttpServerHandler extends SimpleChannelInboundHandler<HttpObject> {
+   
+       @Override
+       protected void channelRead0(ChannelHandlerContext ctx, HttpObject msg) throws Exception {
+           // 解决异常 An exceptionCaught() event was fired, and it reached at the tail of the pipeline. It usually means the last handler in the pipeline did not handle the exception.
+           if (msg instanceof HttpRequest) {
+               ByteBuf content = Unpooled.copiedBuffer("Hello World", CharsetUtil.UTF_8);
+               FullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,
+                       HttpResponseStatus.OK, content);
+               response.headers().set(HttpHeaderNames.CONTENT_TYPE, "text/plain");
+               response.headers().set(HttpHeaderNames.CONTENT_LENGTH, content.readableBytes());
+               // 刷新到客户端
+               ctx.writeAndFlush(response);
+           }
+       }
+   
+   }
+   
+   ```
+
+   运行结果如下:
+
+   ```shell
+   90519@DESKTOP-1JGUKEL MINGW64 ~/Desktop
+   $ curl 'http://localhost:8899'
+     % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                    Dload  Upload   Total   Spent    Left  Speed
+   100    11  100    11    0     0    154      0 --:--:-- --:--:-- --:--:--   157Hello World
+   
+   90519@DESKTOP-1JGUKEL MINGW64 ~/Desktop
+   $
+   
+   ```
+
+4. TestHttpServerHandler自定义类的详解
+
+   ```Java
+   public class TestHttpServerHandler extends SimpleChannelInboundHandler<HttpObject> {
+   
+       // 这个在数据读取使用到
+       @Override
+       protected void channelRead0(ChannelHandlerContext ctx, HttpObject msg) throws Exception {
+           if (msg instanceof HttpRequest) {
+               HttpRequest request = (HttpRequest) msg;
+   
+               System.out.println("请求方法名：" + request.method().name());
+   
+               URI uri = new URI(request.uri());
+               if("/favicon.ico".equals(uri.getPath())) {
+                   System.out.println("请求favicon.ico");
+                   return;
+               }
+   
+               ByteBuf content = Unpooled.copiedBuffer("Hello World", CharsetUtil.UTF_8);
+               FullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,
+                       HttpResponseStatus.OK, content);
+               response.headers().set(HttpHeaderNames.CONTENT_TYPE, "text/plain");
+               response.headers().set(HttpHeaderNames.CONTENT_LENGTH, content.readableBytes());
+   
+               ctx.writeAndFlush(response);
+               // 这个类是可以手动关闭
+   //            ctx.channel().close();
+           }
+       }
+   
+       // 这类是连接的时候, 比如说我们可以在这个回调方法, 进行如下的逻辑: 客户端上线, 或者是初始化的操作
+       @Override
+       public void channelActive(ChannelHandlerContext ctx) throws Exception {
+           System.out.println("channel active");
+           super.channelActive(ctx);
+       }
+      
+   	// 这个方法是通道注册
+       @Override
+       public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
+           System.out.println("channel registered");
+           super.channelRegistered(ctx);
+       }
+       
+   	// 这个是处理方法的添加
+       @Override
+       public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+           System.out.println("handler added");
+           super.handlerAdded(ctx);
+       }
+   
+       // 这个回调是失去回调, 比如我们在这个方法做一些业务: 客户端离线, 或者是失去连接客户端的一些操作
+       @Override
+       public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+           System.out.println("channel inactive");
+           super.channelInactive(ctx);
+       }
+   
+       // 这个方法是通道失去注册
+       @Override
+       public void channelUnregistered(ChannelHandlerContext ctx) throws Exception {
+           System.out.println("channel unregistered");
+           super.channelUnregistered(ctx);
+       }
+   }
+   
+   ```
+
+   上面的运行结果如下:
+
+   ```Java
+   handlerAdded
+   channelRead0
+   channelActive
+   class io.netty.handler.codec.http.DefaultHttpRequest
+   /0:0:0:0:0:0:0:1:64581
+   channelRead0
+   class io.netty.handler.codec.http.LastHttpContent$1
+   /0:0:0:0:0:0:0:1:64581
+   channelInactive
+   channelUnregistered
+   ```
+
+   
+
+5. 
+
+6. 
+
+   
 
