@@ -619,4 +619,138 @@ public class MyClientHandler extends SimpleChannelInboundHandler<String> {
 
    
 
-3. 
+3. 读写空闲检测编程:
+
+   1) SimpleChannelInboundHandler和ChannelInboundHandlerAdapter的区别
+
+   ######   源码分析:
+
+     SimpleChannelInboundHandler
+
+   ```Java
+       @Override
+       public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+           boolean release = true;
+           try {
+               if (acceptInboundMessage(msg)) {
+                   @SuppressWarnings("unchecked")
+                   I imsg = (I) msg;
+                   channelRead0(ctx, imsg);
+               } else {
+                   release = false;
+                   ctx.fireChannelRead(msg);
+               }
+           } finally {
+               if (autoRelease && release) {
+                   ReferenceCountUtil.release(msg);
+               }
+           }
+       }
+   ```
+
+   ChannelInboundHandlerAdapter
+
+   ```Java
+       @Override
+       public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+           ctx.fireChannelRead(msg);
+       }
+   ```
+
+   从源码上上面，我们可以看出，当方法返回时，SimpleChannelInboundHandler会负责释放指向保存该消息的ByteBuf的内存引用。而ChannelInboundHandlerAdapter在其时间节点上不会释放消息，而是将消息传递给下一个ChannelHandler处理。
+
+   ###### 从类定义看:
+
+   SimpleChannelInboundHandler
+
+   ```Java
+   public abstract class SimpleChannelInboundHandler<I> extends ChannelInboundHandlerAdapter {
+   ```
+
+   ChannelInboundHandlerAdapter
+
+   ```java
+   public class ChannelInboundHandlerAdapter extends ChannelHandlerAdapter implements ChannelInboundHandler
+   ```
+
+   从类的定义中，我们可以看出:
+
+   - SimpleChannelInboundHandler<T>是抽象类，而ChannelInboundHandlerAdapter是普通类;
+   - SimpleChannelInboundHandler支持泛型的消息处理，而ChannelInboundHandlerAdapter不支持泛型
+
+   2) 代码编写如下:
+
+   服务器代码如下:
+
+   ```Java
+   public class MyServer {
+   
+       public static void main(String[] args) throws Exception {
+           EventLoopGroup bossGroup = new NioEventLoopGroup();
+           EventLoopGroup workerGroup = new NioEventLoopGroup();
+   
+           try {
+               ServerBootstrap serverBootstrap = new ServerBootstrap();
+               serverBootstrap.group(bossGroup, workerGroup).channel(NioServerSocketChannel.class).
+                       // 日志LoggingHandler是针对bossGroup, childHandler是针对workerGroup
+                       handler(new LoggingHandler(LogLevel.INFO)).
+                       childHandler(new MyServerInitializer());
+   
+               ChannelFuture channelFuture = serverBootstrap.bind(8899).sync();
+               channelFuture.channel().closeFuture().sync();
+           } finally {
+               bossGroup.shutdownGracefully();
+               workerGroup.shutdownGracefully();
+           }
+       }
+   }
+   
+   ```
+
+   ```java
+   public class MyServerHandler extends ChannelInboundHandlerAdapter {
+   
+       @Override
+       public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+           if(evt instanceof IdleStateEvent) {
+               IdleStateEvent event = (IdleStateEvent)evt;
+   
+               String eventType = null;
+   
+               switch (event.state()) {
+                   case READER_IDLE:
+                       eventType = "读空闲";
+                       break;
+                   case WRITER_IDLE:
+                       eventType = "写空闲";
+                       break;
+                   case ALL_IDLE:
+                       eventType = "读写空闲";
+                       break;
+               }
+   
+               System.out.println(ctx.channel().remoteAddress() + "超时事件： " + eventType);
+               ctx.channel().close();
+           }
+       }
+   }
+   
+   ```
+
+   ```java
+   public class MyServerInitializer extends ChannelInitializer<SocketChannel> {
+   
+       @Override
+       protected void initChannel(SocketChannel ch) throws Exception {
+           ChannelPipeline pipeline = ch.pipeline();
+           // 很多Handler, 可以看出这个是责任链设计模式
+           // 参数1: 当读操作超过5秒还没有数据过来, 就出发READER_IDLE, 如果写超过7秒, 就触动WRITER_IDLE, 如果读写空闲超过3秒, 就会触动ALL_IDLE
+           pipeline.addLast(new IdleStateHandler(5, 7, 10, TimeUnit.SECONDS));
+           pipeline.addLast(new MyServerHandler());
+       }
+   }
+   
+   ```
+
+4. 
+
