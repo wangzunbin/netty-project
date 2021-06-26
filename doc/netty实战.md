@@ -282,9 +282,9 @@
 
 ## **三、Socket编程**
 
-1. 服务端代码:
+1. 简单的Socket编程:
 
-     1) 服务类启动类:
+     1) 服务器代码:
 
 ```Java
 public class MyServer {
@@ -361,7 +361,7 @@ public class MyServerHandler extends SimpleChannelInboundHandler<String> {
 }
 ```
 
-2. 客户端代码:
+2) 客户端代码:
 
 ```Java
 public class MyClient {
@@ -434,3 +434,189 @@ public class MyClientHandler extends SimpleChannelInboundHandler<String> {
 
 ```
 
+2. 以聊天为例的Socket编程:
+
+   1) 服务器代码:
+
+   ```java
+   public class MyChatServer {
+   
+       public static void main(String[] args) throws Exception {
+   
+           EventLoopGroup bossGroup = new NioEventLoopGroup();
+           EventLoopGroup workGroup = new NioEventLoopGroup();
+   
+           try {
+   
+               ServerBootstrap bootstrap = new ServerBootstrap();
+               bootstrap.group(bossGroup,workGroup).channel(NioServerSocketChannel.class).childHandler(new MyChatServerInitializer());
+   
+               ChannelFuture channelFuture = bootstrap.bind(8899).sync();
+               channelFuture.channel().closeFuture().sync();
+   
+           }finally {
+               bossGroup.shutdownGracefully().sync();
+               workGroup.shutdownGracefully().sync();
+   
+           }
+   
+       }
+   }
+   
+   ```
+
+   ```Java
+   public class MyChatServerInitializer extends ChannelInitializer<SocketChannel> {
+   
+       @Override
+       protected void initChannel(SocketChannel ch) throws Exception {
+           ChannelPipeline pipeline = ch.pipeline();
+           // 参数1: 最大数据长度, 参数2: 使用系统的默认分隔符数组, 在这里分隔符有两种:  \r, \n或者\n
+           pipeline.addLast(new DelimiterBasedFrameDecoder(4096, Delimiters.lineDelimiter()));
+           pipeline.addLast(new StringDecoder(CharsetUtil.UTF_8));
+           pipeline.addLast(new StringEncoder(CharsetUtil.UTF_8));
+           pipeline.addLast(new MyChatServerHandler());
+   
+       }
+   }
+   
+   ```
+
+   ```Java
+   public class MyChatServerHandler extends SimpleChannelInboundHandler<String> {
+   
+       private static ChannelGroup channelGroup = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
+   
+       @Override
+       protected void channelRead0(ChannelHandlerContext ctx, String msg) throws Exception {
+   
+           Channel channel = ctx.channel();
+   
+           channelGroup.forEach(ch -> {
+               if (channel != ch) {
+                   ch.writeAndFlush(channel.remoteAddress() + " 发送的消息：" + msg + "\n");
+               } else {
+                   ch.writeAndFlush("【自己】" + msg + "\n");
+               }
+           });
+       }
+   
+       /// handler被添加到channel的时候执行，这个动作就是由pipeline的添加handler方法完成的。对于服务端，在客户端连接进来的时候，就通过ServerBootstrapAcceptor的read方法，为每一个channel添加了handler。该方法对于handler而言是第一个触发的方法。
+       @Override
+       public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+           super.handlerAdded(ctx);
+   
+           Channel channel = ctx.channel();
+           channelGroup.writeAndFlush("【服务器】- " + channel.remoteAddress() + " 加入\n");
+           channelGroup.add(channel);
+       }
+   
+       @Override
+       public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+           super.handlerAdded(ctx);
+   
+           Channel channel = ctx.channel();
+           channelGroup.writeAndFlush("【服务器】- " + channel.remoteAddress() + " 加入\n");
+           channelGroup.add(channel);
+       }
+   
+       @Override
+       public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+           super.handlerRemoved(ctx);
+   
+           Channel channel = ctx.channel();
+           channelGroup.writeAndFlush("【服务器】- " + channel.remoteAddress() + " 离开\n");
+   
+           System.out.println("channelGroup size:" + channelGroup.size());
+       }
+   
+   
+       @Override
+       public void channelActive(ChannelHandlerContext ctx) throws Exception {
+           super.channelActive(ctx);
+           Channel channel = ctx.channel();
+           System.out.println(channel.remoteAddress() + " 上线");
+       }
+   
+       @Override
+       public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+           super.channelInactive(ctx);
+           Channel channel = ctx.channel();
+           System.out.println(channel.remoteAddress() + " 下线");
+       }
+   
+       @Override
+       public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+           super.exceptionCaught(ctx, cause);
+           cause.printStackTrace();
+           ctx.close();
+       }
+   
+   }
+   
+   ```
+
+   2)  客户端代码:
+
+   ```Java
+   public class MyChatClient {
+   
+       public static void main(String[] args) throws Exception {
+   
+           EventLoopGroup eventLoopGroup = new NioEventLoopGroup();
+   
+           try {
+   
+               Bootstrap bootstrap = new Bootstrap();
+               bootstrap.group(eventLoopGroup).channel(NioSocketChannel.class).handler(new MyChatClientInitializer());
+   
+               Channel channel = bootstrap.connect("localhost", 8899).sync().channel();
+   
+               BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+               // 通过死循环不停地地在客户端获取键盘的数据
+               for (; ; ) {
+                   channel.writeAndFlush(br.readLine() + "\r\n");
+               }
+   
+           } finally {
+               eventLoopGroup.shutdownGracefully().sync();
+           }
+   
+       }
+   }
+   
+   ```
+
+   ```Java
+   public class MyChatClientInitializer extends ChannelInitializer<SocketChannel> {
+   
+       @Override
+       protected void initChannel(SocketChannel ch) throws Exception {
+           ChannelPipeline pipeline = ch.pipeline();
+           // 分隔符解码器, 分隔符为\n(可以查看源码)
+           // 参数1: 最大数据长度, 参数2: 使用系统的默认分隔符数组, 在这里分隔符有两种:  \r, \n或者\n
+           pipeline.addLast(new DelimiterBasedFrameDecoder(4096, Delimiters.lineDelimiter()));
+           pipeline.addLast(new StringDecoder(CharsetUtil.UTF_8));
+           pipeline.addLast(new StringEncoder(CharsetUtil.UTF_8));
+   
+           pipeline.addLast(new MyChatClientHandler());
+       }
+   }
+   
+   ```
+
+   ```Java
+   public class MyChatClientHandler extends SimpleChannelInboundHandler<String> {
+       @Override
+       protected void channelRead0(ChannelHandlerContext ctx, String msg) throws Exception {
+   
+           System.out.println(msg);
+   
+       }
+   }
+   
+   ```
+
+   
+
+3. 
