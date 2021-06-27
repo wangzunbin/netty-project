@@ -937,5 +937,209 @@ public class MyClientHandler extends SimpleChannelInboundHandler<String> {
      }
      ```
 
-  3. 
+  3. Netty集成Protobuf:
+
+     1) 定义proto文件:
+
+     ```java
+     syntax = "proto2";
+     
+     package com.shengsiyuan.protobuf;
+     
+     option optimize_for = SPEED;
+     option java_package = "com.wangzunbin.netty.sixthexample";
+     option java_outer_classname = "MyDataInfo";
+     
+     message MyMessage {
+     
+         enum DataType{
+             PersonType = 1;
+             DogType = 2;
+             CatType = 3;
+         }
+     
+         required DataType data_type = 1;
+     
+         oneof dataBody {
+             Person person = 2;
+             Dog dog = 3;
+             Cat cat = 4;
+         }
+     }
+     
+     message Person {
+         optional string name = 1;
+         optional int32 age = 2;
+         optional string address = 3;
+     }
+     
+     message Dog {
+         optional string name = 1;
+         optional int32 age = 2;
+     }
+     
+     message Cat {
+         optional string name = 1;
+         optional string city = 2;
+     }
+     ```
+
+     2) 服务器编程:
+
+     ```java
+     public class TestServer {
+     
+         public static void main(String[] args) throws Exception {
+             EventLoopGroup bossGroup = new NioEventLoopGroup();
+             EventLoopGroup workerGroup = new NioEventLoopGroup();
+     
+             try {
+                 ServerBootstrap serverBootstrap = new ServerBootstrap();
+                 serverBootstrap.group(bossGroup, workerGroup).channel(NioServerSocketChannel.class).
+                         handler(new LoggingHandler(LogLevel.INFO)).
+                         childHandler(new TestServerInitializer());
+     
+                 ChannelFuture channelFuture = serverBootstrap.bind(8899).sync();
+                 channelFuture.channel().closeFuture().sync();
+             } finally {
+                 bossGroup.shutdownGracefully();
+                 workerGroup.shutdownGracefully();
+             }
+         }
+     }
+     ```
+
+     ```java
+     public class TestServerInitializer extends ChannelInitializer<SocketChannel> {
+     
+         @Override
+         protected void initChannel(SocketChannel ch) throws Exception {
+             ChannelPipeline pipeline = ch.pipeline();
+     
+             pipeline.addLast(new ProtobufVarint32FrameDecoder());
+             pipeline.addLast(new ProtobufDecoder(MyDataInfo.MyMessage.getDefaultInstance()));
+             pipeline.addLast(new ProtobufVarint32LengthFieldPrepender());
+             pipeline.addLast(new ProtobufEncoder());
+     
+             pipeline.addLast(new TestServerHandler());
+         }
+     }
+     ```
+
+     ```java
+     public class TestServerHandler extends SimpleChannelInboundHandler<MyDataInfo.MyMessage> {
+     
+         @Override
+         protected void channelRead0(ChannelHandlerContext ctx, MyDataInfo.MyMessage msg) throws Exception {
+             MyDataInfo.MyMessage.DataType dataType = msg.getDataType();
+     
+             if (dataType == MyDataInfo.MyMessage.DataType.PersonType) {
+                 MyDataInfo.Person person = msg.getPerson();
+     
+                 System.out.println(person.getName());
+                 System.out.println(person.getAge());
+                 System.out.println(person.getAddress());
+             } else if (dataType == MyDataInfo.MyMessage.DataType.DogType) {
+                 MyDataInfo.Dog dog = msg.getDog();
+     
+                 System.out.println(dog.getName());
+                 System.out.println(dog.getAge());
+             } else {
+                 MyDataInfo.Cat cat = msg.getCat();
+     
+                 System.out.println(cat.getName());
+                 System.out.println(cat.getCity());
+             }
+         }
+     }
+     
+     ```
+
+     3) 客户端代码:
+
+     ```java
+     public class TestClient {
+     
+         public static void main(String[] args) throws Exception {
+             EventLoopGroup eventLoopGroup = new NioEventLoopGroup();
+     
+             try {
+                 Bootstrap bootstrap = new Bootstrap();
+                 bootstrap.group(eventLoopGroup).channel(NioSocketChannel.class).
+                         handler(new TestClientInitializer());
+     
+                 ChannelFuture channelFuture = bootstrap.connect("localhost", 8899).sync();
+                 channelFuture.channel().closeFuture().sync();
+     
+             } finally {
+                 eventLoopGroup.shutdownGracefully();
+             }
+         }
+     }
+     
+     ```
+
+     ```java
+     public class TestClientInitializer extends ChannelInitializer<SocketChannel>{
+     
+         @Override
+         protected void initChannel(SocketChannel ch) throws Exception {
+             ChannelPipeline pipeline = ch.pipeline();
+     
+             pipeline.addLast(new ProtobufVarint32FrameDecoder());
+             pipeline.addLast(new ProtobufDecoder(MyDataInfo.MyMessage.getDefaultInstance()));
+             pipeline.addLast(new ProtobufVarint32LengthFieldPrepender());
+             pipeline.addLast(new ProtobufEncoder());
+     
+             pipeline.addLast(new TestClientHandler());
+         }
+     }
+     ```
+
+     ```java
+     public class TestClientHandler extends SimpleChannelInboundHandler<MyDataInfo.MyMessage> {
+     
+         @Override
+         protected void channelRead0(ChannelHandlerContext ctx, MyDataInfo.MyMessage msg) throws Exception {
+     
+         }
+     
+         @Override
+         public void channelActive(ChannelHandlerContext ctx) throws Exception {
+             int randomInt = new Random().nextInt(3);
+     
+             MyDataInfo.MyMessage myMessage = null;
+     
+             if (0 == randomInt) {
+                 myMessage = MyDataInfo.MyMessage.newBuilder().
+                         setDataType(MyDataInfo.MyMessage.DataType.PersonType).
+                         setPerson(MyDataInfo.Person.newBuilder().
+                                 setName("张三").setAge(20).
+                                 setAddress("北京").build()).
+                         build();
+             } else if (1 == randomInt) {
+                 myMessage = MyDataInfo.MyMessage.newBuilder().
+                         setDataType(MyDataInfo.MyMessage.DataType.DogType).
+                         setDog(MyDataInfo.Dog.newBuilder().
+                                 setName("一只狗").setAge(2).
+                                 build()).
+                         build();
+             } else {
+                 myMessage = MyDataInfo.MyMessage.newBuilder().
+                         setDataType(MyDataInfo.MyMessage.DataType.CatType).
+                         setCat(MyDataInfo.Cat.newBuilder().
+                                 setName("一只猫").setCity("上海").
+                                 build()).
+                         build();
+             }
+     
+             ctx.channel().writeAndFlush(myMessage);
+         }
+     }
+     
+     ```
+
+     
+
+  4. 
 
