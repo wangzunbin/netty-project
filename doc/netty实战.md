@@ -853,7 +853,7 @@ public class MyClientHandler extends SimpleChannelInboundHandler<String> {
       
       ```
 
-## 五、Netty使用Protobuf
+## 五、Netty集成Protobuf
 
   1. 官方文档:
 
@@ -1139,7 +1139,157 @@ public class MyClientHandler extends SimpleChannelInboundHandler<String> {
      
      ```
 
-     
+     注: 采用git submodule(旧方法)和git subtree(新方法)
 
-  4. 
+## 六、Netty继承Thrift
+
+   1. Thrift的官网: 
+
+      [Thrift官网]: https://thrift.apache.org/	"https://thrift.apache.org/"
+      [Thrift中文教程]: https://juejin.cn/post/6844903622380093447	"https://juejin.cn/post/6844903622380093447"
+
+      Thrift主要是实现RPC
+
+   2. 编写一个thrift简单Socket通信:
+
+      1) 定义一个data.thrift文件
+
+      ```java
+      // 定义控件. 相当于java的包
+      namespace java thrift.generated
+      namespace py py.thrift.generated
+      
+      //  定义java别名
+      typedef i16 short
+      typedef i32 int
+      typedef i64 long
+      typedef bool boolean
+      typedef string String
+      
+      struct Person {
+          1: optional String username,
+          2: optional int age,
+          3: optional boolean married
+      }
+      
+      exception DataException {
+          1: optional String message,
+          2: optional String callStack,
+          3: optional String date
+      }
+      
+      service PersonService {
+      
+          Person getPersonByUsername(1: required String username) throws (1: DataException dataException),
+      
+          void savePerson(1: required Person person) throws (1: DataException dataException)
+      }
+      ```
+
+      生成java代码命令如下:
+
+      ```shell
+      thrift --gen java src/thrift/data.thrift
+      ```
+
+      2) 实现idl服务类:
+
+      ```java
+      public class PersonServiceImpl implements PersonService.Iface {
+          @Override
+          public Person getPersonByUsername(String username) throws DataException, TException {
+              System.out.println("Got Client Param: " + username);
+              Person person = new Person();
+              person.setUsername(username);
+              person.setAge(22);
+              person.setMarried(false);
+      
+              System.out.println("getPersonByUsername success:"+person.getUsername());
+              return person;
+          }
+      
+          @Override
+          public void savePerson(Person person) throws DataException, TException {
+              System.out.println("Got Client Param: ");
+      
+              System.out.println(person.getUsername());
+              System.out.println(person.getAge());
+              System.out.println(person.isMarried());
+      
+              System.out.println("Got Client savePerson success!! ");
+          }
+      }
+      
+      ```
+
+      3) 服务器代码:
+
+      ```java
+      public class ThriftServer {
+      
+          public static void main(String[] args) throws Exception {
+      
+              // 非阻塞的Socket
+              TNonblockingServerSocket serverSocket = new TNonblockingServerSocket(8899);
+      
+              THsHaServer.Args thServerArgs = new THsHaServer.Args(serverSocket).minWorkerThreads(2).maxWorkerThreads(4);
+      
+              PersonService.Processor<PersonServiceImpl> processor = new PersonService.Processor<>(new PersonServiceImpl());
+      
+              thServerArgs.protocolFactory(new TCompactProtocol.Factory());
+              thServerArgs.transportFactory(new TFramedTransport.Factory());
+              thServerArgs.processorFactory(new TProcessorFactory(processor));
+      
+              TServer server = new THsHaServer(thServerArgs);
+      
+              System.out.println("Thrift Server Started!");
+      
+              server.serve();
+      
+          }
+      }
+      ```
+
+      4) 客户端代码:
+
+      ```java
+      public class ThriftClient {
+      
+          public static void main(String[] args) throws TTransportException {
+      
+              TTransport transport = new TFramedTransport(new TSocket("localhost", 8899), 600);
+              TProtocol protocol = new TCompactProtocol(transport);
+              PersonService.Client client = new PersonService.Client(protocol);
+      
+              try {
+      
+                  transport.open();
+      
+                  Person person = client.getPersonByUsername("战三");
+                  System.out.println(person.getUsername());
+                  System.out.println(person.getAge());
+                  System.out.println(person.isMarried());
+      
+                  System.out.println("-------");
+      
+                  Person person2 = new Person();
+      
+                  person2.setUsername("李四");
+                  person2.setAge(30);
+                  person2.setMarried(true);
+      
+                  client.savePerson(person2);
+      
+              } catch (Exception ex) {
+                  throw new RuntimeException(ex.getMessage(), ex);
+              } finally {
+                  transport.close();
+              }
+          }
+      }
+      ```
+
+   3. 
+
+   4. 
 
