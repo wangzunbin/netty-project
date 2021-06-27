@@ -20,14 +20,17 @@ public class ThriftServer {
 
         PersonService.Processor<PersonServiceImpl> processor = new PersonService.Processor<>(new PersonServiceImpl());
 
+        // 协议层和传输层在服务器和客户端申明必须是一致的
+        // 协议层, 压缩协议
         thServerArgs.protocolFactory(new TCompactProtocol.Factory());
+        // 传输层
         thServerArgs.transportFactory(new TFramedTransport.Factory());
         thServerArgs.processorFactory(new TProcessorFactory(processor));
 
         TServer server = new THsHaServer(thServerArgs);
 
         System.out.println("Thrift Server Started!");
-
+        //  死循环
         server.serve();
 
     }

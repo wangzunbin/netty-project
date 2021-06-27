@@ -1229,25 +1229,29 @@ public class MyClientHandler extends SimpleChannelInboundHandler<String> {
       
           public static void main(String[] args) throws Exception {
       
-              // 非阻塞的Socket
+              // 非阻塞的Socket(半读半写)
               TNonblockingServerSocket serverSocket = new TNonblockingServerSocket(8899);
       
               THsHaServer.Args thServerArgs = new THsHaServer.Args(serverSocket).minWorkerThreads(2).maxWorkerThreads(4);
       
               PersonService.Processor<PersonServiceImpl> processor = new PersonService.Processor<>(new PersonServiceImpl());
       
+              // 协议层和传输层在服务器和客户端申明必须是一致的
+              // 协议层
               thServerArgs.protocolFactory(new TCompactProtocol.Factory());
+              // 传输层
               thServerArgs.transportFactory(new TFramedTransport.Factory());
               thServerArgs.processorFactory(new TProcessorFactory(processor));
       
               TServer server = new THsHaServer(thServerArgs);
       
               System.out.println("Thrift Server Started!");
-      
+              //  死循环
               server.serve();
       
           }
       }
+      
       ```
 
       4) 客户端代码:
@@ -1289,7 +1293,30 @@ public class MyClientHandler extends SimpleChannelInboundHandler<String> {
       }
       ```
 
-   3. 
+## 七、Netty使用GRPC
 
-   4. 
+  1. 官网: 
 
+     [GRPC官网]: https://grpc.io/	"https://grpc.io/"
+
+  2. GRPC  VS  Thrift 
+
+​			1)  GRPC 优点如下:
+
+​            需要良好的文档、示例
+​			喜欢、习惯HTTP/2、ProtoBuf
+​			对网络传输带宽敏感
+
+​            2)  Thrift 优点如下:
+
+​           需要在非常多的语言间进行数据交换
+
+​           对CPU敏感
+
+​           协议层、传输层有多种控制要求
+
+​           需要稳定的版本
+
+​          不需要良好的文档和示例
+
+ 
