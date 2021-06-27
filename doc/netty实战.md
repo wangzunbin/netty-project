@@ -619,7 +619,11 @@ public class MyClientHandler extends SimpleChannelInboundHandler<String> {
 
    
 
-3. 读写空闲检测编程:
+3. 心跳编程:
+
+   为什么需要心跳的呢?
+
+   如果正常TCP退出的话, 服务器和客户端都会感知4此挥手的退出机制, 如果是非正常的TCP退出的话, 服务器和客户端都是无法感知对方的退出, 这个时候就需要心跳机制来检测对方是否还在存活, 然后再继续双方通信.
 
    1) SimpleChannelInboundHandler和ChannelInboundHandlerAdapter的区别
 
@@ -752,5 +756,102 @@ public class MyClientHandler extends SimpleChannelInboundHandler<String> {
    
    ```
 
-4. 
+## 四、Netty对webSocket的支援
+
+   1. 服务器代码:
+
+      ```Java
+      public class MyServer {
+      
+          public static void main(String[] args) throws Exception {
+      
+              EventLoopGroup bossGroup = new NioEventLoopGroup();
+              EventLoopGroup workLoopGroup = new NioEventLoopGroup();
+      
+              try {
+      
+                  ServerBootstrap serverBootstrap = new ServerBootstrap();
+                  serverBootstrap.group(bossGroup, workLoopGroup).channel(NioServerSocketChannel.class)
+                          .handler(new LoggingHandler(LogLevel.INFO)).childHandler(new WebSocketChannelInitializer());
+      
+                  ChannelFuture channelFuture =  serverBootstrap.bind(8899).sync();
+                  channelFuture.channel().closeFuture().sync();
+              } finally {
+                  bossGroup.shutdownGracefully().sync();
+                  workLoopGroup.shutdownGracefully().sync();
+              }
+      
+      
+          }
+      }
+      
+      ```
+
+      ```
+      public class WebSocketChannelInitializer extends ChannelInitializer<SocketChannel> {
+      
+          /*
+          WebSocketServerProtocolHandler：参数是访问路径，这边指定的是ws，服务客户端访问服务器的时候指定的url是：ws://localhost:8899/ws。
+          它负责websocket握手以及处理控制框架（Close，Ping（心跳检检测request），Pong（心跳检测响应））。 文本和二进制数据帧被传递到管道中的下一个处理程序进行处理。
+          */
+          @Override
+          protected void initChannel(SocketChannel ch) throws Exception {
+      
+              ChannelPipeline channelPipeline = ch.pipeline();
+              // websocket协议本身是基于http协议的，所以这边也要使用http解编码器
+              channelPipeline.addLast(new HttpServerCodec());
+              // 以块的方式来写的处理器
+              channelPipeline.addLast(new ChunkedWriteHandler());
+              // netty是基于分段请求的，HttpObjectAggregator的作用是将请求分段再聚合,参数是聚合字节的最大长度
+              channelPipeline.addLast(new HttpObjectAggregator(8192));
+              // ws://server:port/context_path
+              // ws://localhost:9999/ws
+              // 参数指的是contex_path
+              channelPipeline.addLast(new WebSocketServerProtocolHandler("/ws"));
+              // websocket定义了传递数据的6中frame类型
+              channelPipeline.addLast(new TextWebSocketFrameHandler());
+      
+          }
+      }
+      ```
+
+      ```Java
+      /**
+       * 桢：
+       * WebSocket规范中定义了6种类型的桢，netty为其提供了具体的对应的POJO实现。
+       * WebSocketFrame：所有桢的父类，所谓桢就是WebSocket服务在建立的时候，在通道中处理的数据类型。本列子中客户端和服务器之间处理的是文本信息。所以范型参数是TextWebSocketFrame。
+       */
+      public class TextWebSocketFrameHandler extends SimpleChannelInboundHandler<TextWebSocketFrame> {
+      
+          @Override
+          protected void channelRead0(ChannelHandlerContext ctx, TextWebSocketFrame msg) throws Exception {
+              System.out.println("收到消息： " + msg.text());
+              ctx.channel().writeAndFlush(new TextWebSocketFrame("服务器时间： " + LocalDateTime.now()));
+      
+          }
+      
+      
+          @Override
+          public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+              super.handlerAdded(ctx);
+              System.out.println("handlerAdded: " + ctx.channel().id().asLongText());
+          }
+      
+      
+          @Override
+          public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+              super.handlerRemoved(ctx);
+              System.out.println("handlerRemoved: " + ctx.channel().id().asLongText());
+          }
+      
+          @Override
+          public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+              super.exceptionCaught(ctx, cause);
+              ctx.close();
+          }
+      }
+      
+      ```
+
+## 五、Netty使用Protobuf
 

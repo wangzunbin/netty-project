@@ -20,7 +20,7 @@ public class MyChatClient {
             Bootstrap bootstrap = new Bootstrap();
             bootstrap.group(eventLoopGroup).channel(NioSocketChannel.class).handler(new MyChatClientInitializer());
 
-            Channel channel = bootstrap.connect("localhost", 8899).sync().channel();
+            Channel channel = bootstrap.connect("127.0.0.1", 8899).sync().channel();
 
             // 通过死循环不停地地在客户端获取键盘的数据
             BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
