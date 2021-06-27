@@ -855,3 +855,87 @@ public class MyClientHandler extends SimpleChannelInboundHandler<String> {
 
 ## 五、Netty使用Protobuf
 
+  1. 官方文档:
+
+     [protocol-buffers官网]: https://developers.google.com/protocol-buffers	"https://developers.google.com/protocol-buffers"
+
+  2. 简单的编程:
+
+     1)  安装ProtoBuf编译器:
+
+     protobuf的github发布地址： https://github.com/protocolbuffers/protobuf/releases
+
+     protobuf的编译器叫protoc，在上面的网址中找到最新版本的安装包，下载安装。
+
+     这里下载的是：protoc-3.9.1-win64.zip ， windows 64位系统版本的编译器，下载后，解压到你想要的安装目录即可。
+
+     > 提示：安装完成后，将 [protoc安装目录]/bin 路径添加到PATH环境变量中
+
+     打开cmd，命令窗口执行protoc命令，没有报错的话，就已经安装成功。
+
+     2) 引入jar包:
+
+     ```xml
+       <dependency>
+           <groupId>com.google.protobuf</groupId>
+           <artifactId>protobuf-java</artifactId>
+           <version>3.17.3</version>
+           </dependency>
+       <dependency>
+           <groupId>com.google.protobuf</groupId>
+           <artifactId>protobuf-java-util</artifactId>
+           <version>3.17.3</version>
+       </dependency>
+     ```
+
+     3)  创建 .proto 文件(Student.proto)，定义数据结构:
+
+     ```java
+     syntax = "proto2";
+     
+     package com.shengsiyuan.protobuf;
+     
+     
+     option optimize_for = SPEED;
+     option java_package = "com.wangzunbin.protobuf";
+     option java_outer_classname = "DataInfo";
+     
+     message Student {
+       optional string name = 1;
+       optional int32 age = 2;
+       optional string address = 3;
+     }
+     ```
+
+     4)   在根项目的控制台执行以下命令:
+
+     ```
+     protoc --java_out=src/main/java src/protobuf/Student.proto
+     ```
+
+     就可以在src下面可以看到生产的文件:
+
+     ![image-20210627163341273](img\5-1.png)
+
+     5)  测试:
+
+     ```java
+     public class ProtoBufTest {
+     
+         public static void main(String[] args) throws Exception {
+     
+             DataInfo.Student student = DataInfo.Student.newBuilder().setName("张三").setAddress("杭州").setAge(24).build();
+             // 编码
+             byte[] student2ByteArray = student.toByteArray();
+             // 解码
+             DataInfo.Student student2 = DataInfo.Student.parseFrom(student2ByteArray);
+     
+             System.out.println(student2.getAddress());
+             System.out.println(student2.getName());
+             System.out.println(student2.getAge());
+         }
+     }
+     ```
+
+  3. 
+
