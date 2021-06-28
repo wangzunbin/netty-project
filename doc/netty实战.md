@@ -888,7 +888,7 @@ public class MyClientHandler extends SimpleChannelInboundHandler<String> {
        </dependency>
      ```
 
-     3)  创建 .proto 文件(Student.proto)，定义数据结构:
+     3)  创建 .com.wangzunbin.proto 文件(Student.com.wangzunbin.proto)，定义数据结构:
 
      ```java
      syntax = "proto2";
@@ -910,7 +910,7 @@ public class MyClientHandler extends SimpleChannelInboundHandler<String> {
      4)   在根项目的控制台执行以下命令:
 
      ```
-     protoc --java_out=src/main/java src/protobuf/Student.proto
+     protoc --java_out=src/main/java src/protobuf/Student.com.wangzunbin.proto
      ```
 
      就可以在src下面可以看到生产的文件:
@@ -1150,7 +1150,18 @@ public class MyClientHandler extends SimpleChannelInboundHandler<String> {
 
       Thrift主要是实现RPC
 
-   2. 编写一个thrift简单Socket通信:
+   2. 引入Jar包:
+
+      ```xml
+        <dependency>
+           <groupId>org.apache.thrift</groupId>
+           <artifactId>libthrift</artifactId>
+           <version>0.14.2</version>
+        </dependency>
+      
+      ```
+      
+   3. 编写一个thrift简单Socket通信:
 
       1) 定义一个data.thrift文件
 
@@ -1319,4 +1330,298 @@ public class MyClientHandler extends SimpleChannelInboundHandler<String> {
 
 ​          不需要良好的文档和示例
 
- 
+3. Github官方教程
+
+   [GRPC的Github官方教程]: https://github.com/grpc/grpc-java	"https://github.com/grpc/grpc-java"
+
+4. GRPC编程:
+
+   1) 引入Jar包:
+
+   ```xml
+   <dependency>
+     <groupId>io.grpc</groupId>
+     <artifactId>grpc-netty-shaded</artifactId>
+     <version>1.38.0</version>
+   </dependency>
+   <dependency>
+     <groupId>io.grpc</groupId>
+     <artifactId>grpc-protobuf</artifactId>
+     <version>1.38.0</version>
+   </dependency>
+   <dependency>
+     <groupId>io.grpc</groupId>
+     <artifactId>grpc-stub</artifactId>
+     <version>1.38.0</version>
+   </dependency>
+   <dependency> <!-- necessary for Java 9+ -->
+     <groupId>org.apache.tomcat</groupId>
+     <artifactId>annotations-api</artifactId>
+     <version>6.0.53</version>
+     <scope>provided</scope>
+   </dependency>
+   ```
+
+   2) 引入GRPC和Proto的编译插件:
+
+   ```xml
+   <build>
+     <extensions>
+       <extension>
+         <groupId>kr.motd.maven</groupId>
+         <artifactId>os-maven-plugin</artifactId>
+         <version>1.6.2</version>
+       </extension>
+     </extensions>
+     <plugins>
+       <plugin>
+         <groupId>org.xolstice.maven.plugins</groupId>
+         <artifactId>protobuf-maven-plugin</artifactId>
+         <version>0.6.1</version>
+         <configuration>
+           <protocArtifact>com.google.protobuf:protoc:3.12.0:exe:${os.detected.classifier}</protocArtifact>
+           <pluginId>grpc-java</pluginId>
+           <pluginArtifact>io.grpc:protoc-gen-grpc-java:1.38.0:exe:${os.detected.classifier}</pluginArtifact>
+         </configuration>
+         <executions>
+           <execution>
+             <goals>
+               <goal>compile</goal>
+               <goal>compile-custom</goal>
+             </goals>
+           </execution>
+         </executions>
+       </plugin>
+     </plugins>
+   </build>
+   
+   ```
+
+   3) 如何把proto文件生成为java代码:
+
+   请参考这个文章:  
+
+   [maven集成Protobuff并创建GRpc示例]: https://blog.csdn.net/mbshqqb/article/details/79584949
+
+   4) 服务器代码:
+
+   ```java
+   public class GrpcServer {
+   
+       private Server server;
+   
+       private void start() throws IOException {
+           this.server = ServerBuilder.forPort(8899).addService(new StudentServiceImpl()).build().start();
+   
+           System.out.println("server started!");
+   
+           // 优雅地退出
+           Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+               System.out.println("关闭jvm");
+               GrpcServer.this.stop();
+           }));
+       }
+   
+       private void stop() {
+           if(null != this.server) {
+               this.server.shutdown();
+           }
+       }
+   
+       private void awaitTermination() throws InterruptedException {
+           if(null != this.server) {
+               this.server.awaitTermination();
+           }
+       }
+   
+       public static void main(String[] args) throws IOException, InterruptedException {
+           GrpcServer server = new GrpcServer();
+   
+           server.start();
+           // 让服务器等待（否则启动完就会退出）
+           server.awaitTermination();
+       }
+   }
+   
+   ```
+
+   ```java
+   public class StudentServiceImpl extends StudentServiceGrpc.StudentServiceImplBase {
+   
+       @Override
+       public void getRealNameByUsername(MyRequest request, StreamObserver<MyResponse> responseObserver) {
+           System.out.println("接受到客户端信息： " + request.getUsername());
+   
+           responseObserver.onNext(MyResponse.newBuilder().setRealname("张三").build());
+           responseObserver.onCompleted();
+       }
+   
+       @Override
+       public void getStudentsByAge(StudentRequest request, StreamObserver<StudentResponse> responseObserver) {
+   
+           System.out.println("接受到客户端信息： " + request.getAge());
+   
+           responseObserver.onNext(StudentResponse.newBuilder().setName("张三").setAge(20).setCity("北京").build());
+           responseObserver.onNext(StudentResponse.newBuilder().setName("李四").setAge(30).setCity("天津").build());
+           responseObserver.onNext(StudentResponse.newBuilder().setName("王五").setAge(40).setCity("成都").build());
+           responseObserver.onNext(StudentResponse.newBuilder().setName("赵六").setAge(50).setCity("深圳").build());
+   
+           responseObserver.onCompleted();
+       }
+   
+       @Override
+       public StreamObserver<StudentRequest> getStudentsWrapperByAges(StreamObserver<StudentResponseList> responseObserver) {
+           return new StreamObserver<StudentRequest>() {
+   
+               @Override
+               public void onNext(StudentRequest value) {
+                   System.out.println("onNext: " + value.getAge());
+               }
+   
+               @Override
+               public void onError(Throwable t) {
+                   System.out.println(t.getMessage());
+               }
+   
+               @Override
+               public void onCompleted() {
+                   StudentResponse studentResponse = StudentResponse.newBuilder().setName("张三").setAge(20).setCity("西安").build();
+                   StudentResponse studentResponse2 = StudentResponse.newBuilder().setName("李四").setAge(30).setCity("广州").build();
+   
+                   StudentResponseList studentResponseList = StudentResponseList.newBuilder().
+                           addStudentResponse(studentResponse).addStudentResponse(studentResponse2).build();
+   
+                   // 把结果返回给客户端（考虑到会有stream情况）
+                   responseObserver.onNext(studentResponseList);
+                   // 告知客户端服务端，服务端已执行完毕
+                   responseObserver.onCompleted();
+               }
+           };
+       }
+   
+       @Override
+       public StreamObserver<StreamRequest> biTalk(StreamObserver<StreamResponse> responseObserver) {
+           return new StreamObserver<StreamRequest>() {
+               @Override
+               public void onNext(StreamRequest value) {
+                   System.out.println(value.getRequestInfo());
+   
+                   responseObserver.onNext(StreamResponse.newBuilder().setResponseInfo(UUID.randomUUID().toString()).build());
+               }
+   
+               @Override
+               public void onError(Throwable t) {
+                   System.out.println(t.getMessage());
+               }
+   
+               @Override
+               public void onCompleted() {
+                   responseObserver.onCompleted();
+               }
+           };
+       }
+   }
+   
+   ```
+
+   5) 客户端代码:
+
+   ```java
+   public class GrpcClient {
+   
+       public static void main(String[] args) {
+           ManagedChannel managedChannel = ManagedChannelBuilder.forAddress("localhost", 8899).
+                   usePlaintext().build();
+           StudentServiceGrpc.StudentServiceBlockingStub blockingStub = StudentServiceGrpc.
+                   newBlockingStub(managedChannel);
+           StudentServiceGrpc.StudentServiceStub stub = StudentServiceGrpc.newStub(managedChannel);
+   
+           MyResponse myResponse = blockingStub.
+                   getRealNameByUsername(MyRequest.newBuilder().setUsername("zhangsan").build());
+   
+           System.out.println(myResponse.getRealname());
+   
+           System.out.println("---------------------------------");
+           Iterator<StudentResponse> iterator = blockingStub.getStudentsByAge(StudentRequest.newBuilder().setAge(20).buildPartial());
+   
+           while (iterator.hasNext()) {
+               StudentResponse studentResponse = iterator.next();
+               System.out.println(studentResponse.getName() + ", " + studentResponse.getAge() + ", " + studentResponse.getCity());
+           }
+   
+   
+           System.out.println("--------------------");
+           StreamObserver<StudentResponseList> studentResponseListStreamObserver = new StreamObserver<StudentResponseList>() {
+               @Override
+               public void onNext(StudentResponseList value) {
+                   value.getStudentResponseList().forEach(studentResponse -> {
+                       System.out.println(studentResponse.getName());
+                       System.out.println(studentResponse.getAge());
+                       System.out.println(studentResponse.getCity());
+                       System.out.println("******");
+                   });
+               }
+   
+               @Override
+               public void onError(Throwable t) {
+                   System.out.println(t.getMessage());
+               }
+   
+               @Override
+               public void onCompleted() {
+                   System.out.println("completed!");
+               }
+           };
+   
+           StreamObserver<StudentRequest> studentRequestStreamObserver = stub.getStudentsWrapperByAges(studentResponseListStreamObserver);
+   
+           studentRequestStreamObserver.onNext(StudentRequest.newBuilder().setAge(20).build());
+           studentRequestStreamObserver.onNext(StudentRequest.newBuilder().setAge(30).build());
+           studentRequestStreamObserver.onNext(StudentRequest.newBuilder().setAge(40).build());
+           studentRequestStreamObserver.onNext(StudentRequest.newBuilder().setAge(50).build());
+   
+           studentRequestStreamObserver.onCompleted();
+   
+   
+           System.out.println("--------------------*********");
+   
+           StreamObserver<StreamRequest> requestStreamObserver = stub.biTalk(new StreamObserver<StreamResponse>() {
+               @Override
+               public void onNext(StreamResponse value) {
+                   System.out.println(value.getResponseInfo());
+               }
+   
+               @Override
+               public void onError(Throwable t) {
+                   System.out.println(t.getMessage());
+               }
+   
+               @Override
+               public void onCompleted() {
+                   System.out.println("onCompleted");
+               }
+           });
+   
+           for(int i = 0; i < 10; ++i) {
+               requestStreamObserver.onNext(StreamRequest.newBuilder().setRequestInfo(LocalDateTime.now().toString()).build());
+   
+               try {
+                   Thread.sleep(1000);
+               } catch (InterruptedException e) {
+                   e.printStackTrace();
+               }
+           }
+           System.out.println("--------------------*********");
+           try {
+               Thread.sleep(15000);
+           } catch (InterruptedException e) {
+               e.printStackTrace();
+           }
+   
+   
+       }
+   }
+   ```
+
+5. 
+
