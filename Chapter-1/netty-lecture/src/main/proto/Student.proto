@@ -8,12 +8,17 @@ option java_multiple_files = true;
 
 service StudentService {
 
+    // GRPC的4种方法调用形式
+    // 1. 一元RPC(Unary RPCs )：这是最简单的定义，客户端发送一个请求，服务端返回一个结果
     rpc GetRealNameByUsername(MyRequest) returns (MyResponse) {}
 
+    // 2. 服务器流RPC（Server streaming RPCs）：客户端发送一个请求，服务端返回一个流给客户端，客户从流中读取一系列消息，直到读取所有小心
     rpc GetStudentsByAge(StudentRequest) returns (stream StudentResponse) {}
 
+    // 3. 客户端流RPC(Client streaming RPCs )：客户端通过流向服务端发送一系列消息，然后等待服务端读取完数据并返回处理结果
     rpc GetStudentsWrapperByAges(stream StudentRequest) returns (StudentResponseList) {}
 
+    // 4. 双向流RPC(Bidirectional streaming RPCs)：客户端和服务端都可以独立向对方发送或接受一系列的消息。客户端和服务端读写的顺序是任意。
     rpc BiTalk(stream StreamRequest) returns (stream StreamResponse) {}
 
 }

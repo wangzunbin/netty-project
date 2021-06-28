@@ -1399,6 +1399,64 @@ public class MyClientHandler extends SimpleChannelInboundHandler<String> {
 
    3) 如何把proto文件生成为java代码:
 
+   ```java
+   syntax = "proto3";
+   
+   package com.shengsiyuan.proto;
+   
+   option java_package = "com.wangzunbin.com.wangzunbin.proto";
+   option java_outer_classname = "StudentProto";
+   option java_multiple_files = true;
+   
+   service StudentService {
+   
+       // GRPC的4种方法调用形式
+       // 1. 一元RPC(Unary RPCs )：这是最简单的定义，客户端发送一个请求，服务端返回一个结果
+       rpc GetRealNameByUsername(MyRequest) returns (MyResponse) {}
+   
+       // 2. 服务器流RPC（Server streaming RPCs）：客户端发送一个请求，服务端返回一个流给客户端，客户从流中读取一系列消息，直到读取所有小心
+       rpc GetStudentsByAge(StudentRequest) returns (stream StudentResponse) {}
+   
+       // 3. 客户端流RPC(Client streaming RPCs )：客户端通过流向服务端发送一系列消息，然后等待服务端读取完数据并返回处理结果
+       rpc GetStudentsWrapperByAges(stream StudentRequest) returns (StudentResponseList) {}
+   
+       // 4. 双向流RPC(Bidirectional streaming RPCs)：客户端和服务端都可以独立向对方发送或接受一系列的消息。客户端和服务端读写的顺序是任意。
+       rpc BiTalk(stream StreamRequest) returns (stream StreamResponse) {}
+   
+   }
+   
+   message MyRequest {
+       string username = 1;
+   }
+   
+   message MyResponse {
+       string realname = 2;
+   }
+   
+   message StudentRequest {
+       int32 age = 1;
+   }
+   
+   message StudentResponse {
+       string name = 1;
+       int32 age = 2;
+       string city = 3;
+   }
+   
+   message StudentResponseList {
+       repeated StudentResponse studentResponse = 1;
+   }
+   
+   message StreamRequest {
+       string request_info = 1;
+   }
+   
+   message StreamResponse {
+       string response_info = 1;
+   }
+   
+   ```
+
    请参考这个文章:  
 
    [maven集成Protobuff并创建GRpc示例]: https://blog.csdn.net/mbshqqb/article/details/79584949
@@ -1448,6 +1506,11 @@ public class MyClientHandler extends SimpleChannelInboundHandler<String> {
    ```java
    public class StudentServiceImpl extends StudentServiceGrpc.StudentServiceImplBase {
    
+       /**
+        *
+        * @param request  入参为普通参数
+        * @param responseObserver  返回也是普通参数
+        */
        @Override
        public void getRealNameByUsername(MyRequest request, StreamObserver<MyResponse> responseObserver) {
            System.out.println("接受到客户端信息： " + request.getUsername());
@@ -1456,6 +1519,10 @@ public class MyClientHandler extends SimpleChannelInboundHandler<String> {
            responseObserver.onCompleted();
        }
    
+       /**
+        * @param request  入参为普通参数
+        * @param responseObserver  返回是流式数据
+        */
        @Override
        public void getStudentsByAge(StudentRequest request, StreamObserver<StudentResponse> responseObserver) {
    
@@ -1469,6 +1536,12 @@ public class MyClientHandler extends SimpleChannelInboundHandler<String> {
            responseObserver.onCompleted();
        }
    
+   
+       /**
+        *
+        * @param responseObserver 流式参数
+        * @return  返回流式数据
+        */
        @Override
        public StreamObserver<StudentRequest> getStudentsWrapperByAges(StreamObserver<StudentResponseList> responseObserver) {
            return new StreamObserver<StudentRequest>() {
@@ -1544,6 +1617,7 @@ public class MyClientHandler extends SimpleChannelInboundHandler<String> {
            System.out.println("---------------------------------");
            Iterator<StudentResponse> iterator = blockingStub.getStudentsByAge(StudentRequest.newBuilder().setAge(20).buildPartial());
    
+           // 服务器来一个数据, 客户端就拿到一个数据(迭代器)
            while (iterator.hasNext()) {
                StudentResponse studentResponse = iterator.next();
                System.out.println(studentResponse.getName() + ", " + studentResponse.getAge() + ", " + studentResponse.getCity());
@@ -1554,6 +1628,7 @@ public class MyClientHandler extends SimpleChannelInboundHandler<String> {
            StreamObserver<StudentResponseList> studentResponseListStreamObserver = new StreamObserver<StudentResponseList>() {
                @Override
                public void onNext(StudentResponseList value) {
+                   // 返回结果
                    value.getStudentResponseList().forEach(studentResponse -> {
                        System.out.println(studentResponse.getName());
                        System.out.println(studentResponse.getAge());

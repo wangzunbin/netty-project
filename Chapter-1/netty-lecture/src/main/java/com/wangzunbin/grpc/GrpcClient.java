@@ -29,6 +29,7 @@ public class GrpcClient {
         System.out.println("---------------------------------");
         Iterator<StudentResponse> iterator = blockingStub.getStudentsByAge(StudentRequest.newBuilder().setAge(20).buildPartial());
 
+        // 服务器来一个数据, 客户端就拿到一个数据(迭代器)
         while (iterator.hasNext()) {
             StudentResponse studentResponse = iterator.next();
             System.out.println(studentResponse.getName() + ", " + studentResponse.getAge() + ", " + studentResponse.getCity());
@@ -39,6 +40,7 @@ public class GrpcClient {
         StreamObserver<StudentResponseList> studentResponseListStreamObserver = new StreamObserver<StudentResponseList>() {
             @Override
             public void onNext(StudentResponseList value) {
+                // 返回结果
                 value.getStudentResponseList().forEach(studentResponse -> {
                     System.out.println(studentResponse.getName());
                     System.out.println(studentResponse.getAge());

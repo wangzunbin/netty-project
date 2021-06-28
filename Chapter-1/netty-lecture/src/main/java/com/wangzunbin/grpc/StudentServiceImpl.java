@@ -12,6 +12,11 @@ import java.util.UUID;
 
 public class StudentServiceImpl extends StudentServiceGrpc.StudentServiceImplBase {
 
+    /**
+     *
+     * @param request  入参为普通参数
+     * @param responseObserver  返回也是普通参数
+     */
     @Override
     public void getRealNameByUsername(MyRequest request, StreamObserver<MyResponse> responseObserver) {
         System.out.println("接受到客户端信息： " + request.getUsername());
@@ -20,6 +25,10 @@ public class StudentServiceImpl extends StudentServiceGrpc.StudentServiceImplBas
         responseObserver.onCompleted();
     }
 
+    /**
+     * @param request  入参为普通参数
+     * @param responseObserver  返回是流式数据
+     */
     @Override
     public void getStudentsByAge(StudentRequest request, StreamObserver<StudentResponse> responseObserver) {
 
@@ -33,6 +42,12 @@ public class StudentServiceImpl extends StudentServiceGrpc.StudentServiceImplBas
         responseObserver.onCompleted();
     }
 
+
+    /**
+     *
+     * @param responseObserver 流式参数
+     * @return  返回流式数据
+     */
     @Override
     public StreamObserver<StudentRequest> getStudentsWrapperByAges(StreamObserver<StudentResponseList> responseObserver) {
         return new StreamObserver<StudentRequest>() {
