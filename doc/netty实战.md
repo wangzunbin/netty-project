@@ -1365,37 +1365,48 @@ public class MyClientHandler extends SimpleChannelInboundHandler<String> {
    2) 引入GRPC和Proto的编译插件:
 
    ```xml
-   <build>
-     <extensions>
-       <extension>
-         <groupId>kr.motd.maven</groupId>
-         <artifactId>os-maven-plugin</artifactId>
-         <version>1.6.2</version>
-       </extension>
-     </extensions>
-     <plugins>
-       <plugin>
-         <groupId>org.xolstice.maven.plugins</groupId>
-         <artifactId>protobuf-maven-plugin</artifactId>
-         <version>0.6.1</version>
-         <configuration>
-           <protocArtifact>com.google.protobuf:protoc:3.12.0:exe:${os.detected.classifier}</protocArtifact>
-           <pluginId>grpc-java</pluginId>
-           <pluginArtifact>io.grpc:protoc-gen-grpc-java:1.38.0:exe:${os.detected.classifier}</pluginArtifact>
-         </configuration>
-         <executions>
-           <execution>
-             <goals>
-               <goal>compile</goal>
-               <goal>compile-custom</goal>
-             </goals>
-           </execution>
-         </executions>
-       </plugin>
-     </plugins>
-   </build>
+       <build>
+           <extensions>
+               <extension>
+                   <groupId>kr.motd.maven</groupId>
+                   <artifactId>os-maven-plugin</artifactId>
+                   <version>1.6.2</version>
+               </extension>
+           </extensions>
+           <plugins>
+               <plugin>
+                   <groupId>org.xolstice.maven.plugins</groupId>
+                   <artifactId>protobuf-maven-plugin</artifactId>
+                   <version>0.6.1</version>
+                   <configuration>
+                       <protocArtifact>com.google.protobuf:protoc:3.12.0:exe:${os.detected.classifier}</protocArtifact>
+                       <pluginId>grpc-java</pluginId>
+                       <pluginArtifact>io.grpc:protoc-gen-grpc-java:1.38.0:exe:${os.detected.classifier}</pluginArtifact>
+                       /*指定代码生成到 src 下*/
+                       <outputDirectory>${basedir}/src/main/java</outputDirectory>
+                       <clearOutputDirectory>false</clearOutputDirectory>
+                       <!--              proto的源文件      -->
+   <!--                    <protoSourceRoot></protoSourceRoot>-->
+                   </configuration>
+                   <executions>
+                       <execution>
+                           <goals>
+                               <goal>compile</goal>
+                               <goal>compile-custom</goal>
+                           </goals>
+                       </execution>
+                   </executions>
+               </plugin>
+           </plugins>
+       </build>
    
    ```
+
+   ![image-20210630211854607](D:\old\GithubCode\netty-project\doc\img\7-1.png)
+
+   protobuf:compile:  //编译消息对象
+
+   Protobuf:compile-custom:  //依赖消息对象,生成接口服务
 
    3) 如何把proto文件生成为java代码:
 
@@ -1404,7 +1415,7 @@ public class MyClientHandler extends SimpleChannelInboundHandler<String> {
    
    package com.shengsiyuan.proto;
    
-   option java_package = "com.wangzunbin.com.wangzunbin.proto";
+   option java_package = "com.wangzunbin.proto";
    option java_outer_classname = "StudentProto";
    option java_multiple_files = true;
    

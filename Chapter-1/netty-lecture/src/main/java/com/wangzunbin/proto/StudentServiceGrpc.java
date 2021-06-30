@@ -1,31 +1,19 @@
 package com.wangzunbin.proto;
 
 import static io.grpc.MethodDescriptor.generateFullMethodName;
-import static io.grpc.stub.ClientCalls.asyncBidiStreamingCall;
-import static io.grpc.stub.ClientCalls.asyncClientStreamingCall;
-import static io.grpc.stub.ClientCalls.asyncServerStreamingCall;
-import static io.grpc.stub.ClientCalls.asyncUnaryCall;
-import static io.grpc.stub.ClientCalls.blockingServerStreamingCall;
-import static io.grpc.stub.ClientCalls.blockingUnaryCall;
-import static io.grpc.stub.ClientCalls.futureUnaryCall;
-import static io.grpc.stub.ServerCalls.asyncBidiStreamingCall;
-import static io.grpc.stub.ServerCalls.asyncClientStreamingCall;
-import static io.grpc.stub.ServerCalls.asyncServerStreamingCall;
-import static io.grpc.stub.ServerCalls.asyncUnaryCall;
-import static io.grpc.stub.ServerCalls.asyncUnimplementedStreamingCall;
-import static io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall;
+
 /**
  */
 @javax.annotation.Generated(
-    value = "by gRPC com.wangzunbin.proto compiler (version 1.38.0)",
-    comments = "Source: Student.com.wangzunbin.proto")
+    value = "by gRPC proto compiler (version 1.38.0)",
+    comments = "Source: Student.proto")
 public final class StudentServiceGrpc {
 
   private StudentServiceGrpc() {}
 
-  public static final String SERVICE_NAME = "com.shengsiyuan.com.wangzunbin.proto.StudentService";
+  public static final String SERVICE_NAME = "com.shengsiyuan.proto.StudentService";
 
-  // Static method descriptors that strictly reflect the com.wangzunbin.proto.
+  // Static method descriptors that strictly reflect the proto.
   private static volatile io.grpc.MethodDescriptor<com.wangzunbin.proto.MyRequest,
       com.wangzunbin.proto.MyResponse> getGetRealNameByUsernameMethod;
 
@@ -156,7 +144,7 @@ public final class StudentServiceGrpc {
   public static StudentServiceStub newStub(io.grpc.Channel channel) {
     io.grpc.stub.AbstractStub.StubFactory<StudentServiceStub> factory =
       new io.grpc.stub.AbstractStub.StubFactory<StudentServiceStub>() {
-        @Override
+        @java.lang.Override
         public StudentServiceStub newStub(io.grpc.Channel channel, io.grpc.CallOptions callOptions) {
           return new StudentServiceStub(channel, callOptions);
         }
@@ -171,7 +159,7 @@ public final class StudentServiceGrpc {
       io.grpc.Channel channel) {
     io.grpc.stub.AbstractStub.StubFactory<StudentServiceBlockingStub> factory =
       new io.grpc.stub.AbstractStub.StubFactory<StudentServiceBlockingStub>() {
-        @Override
+        @java.lang.Override
         public StudentServiceBlockingStub newStub(io.grpc.Channel channel, io.grpc.CallOptions callOptions) {
           return new StudentServiceBlockingStub(channel, callOptions);
         }
@@ -186,7 +174,7 @@ public final class StudentServiceGrpc {
       io.grpc.Channel channel) {
     io.grpc.stub.AbstractStub.StubFactory<StudentServiceFutureStub> factory =
       new io.grpc.stub.AbstractStub.StubFactory<StudentServiceFutureStub>() {
-        @Override
+        @java.lang.Override
         public StudentServiceFutureStub newStub(io.grpc.Channel channel, io.grpc.CallOptions callOptions) {
           return new StudentServiceFutureStub(channel, callOptions);
         }
@@ -199,6 +187,10 @@ public final class StudentServiceGrpc {
   public static abstract class StudentServiceImplBase implements io.grpc.BindableService {
 
     /**
+     * <pre>
+     * GRPC的4种方法调用形式
+     * 1. 一元RPC(Unary RPCs )：这是最简单的定义，客户端发送一个请求，服务端返回一个结果
+     * </pre>
      */
     public void getRealNameByUsername(com.wangzunbin.proto.MyRequest request,
         io.grpc.stub.StreamObserver<com.wangzunbin.proto.MyResponse> responseObserver) {
@@ -206,6 +198,9 @@ public final class StudentServiceGrpc {
     }
 
     /**
+     * <pre>
+     * 2. 服务器流RPC（Server streaming RPCs）：客户端发送一个请求，服务端返回一个流给客户端，客户从流中读取一系列消息，直到读取所有小心
+     * </pre>
      */
     public void getStudentsByAge(com.wangzunbin.proto.StudentRequest request,
         io.grpc.stub.StreamObserver<com.wangzunbin.proto.StudentResponse> responseObserver) {
@@ -213,6 +208,9 @@ public final class StudentServiceGrpc {
     }
 
     /**
+     * <pre>
+     * 3. 客户端流RPC(Client streaming RPCs )：客户端通过流向服务端发送一系列消息，然后等待服务端读取完数据并返回处理结果
+     * </pre>
      */
     public io.grpc.stub.StreamObserver<com.wangzunbin.proto.StudentRequest> getStudentsWrapperByAges(
         io.grpc.stub.StreamObserver<com.wangzunbin.proto.StudentResponseList> responseObserver) {
@@ -220,13 +218,16 @@ public final class StudentServiceGrpc {
     }
 
     /**
+     * <pre>
+     * 4. 双向流RPC(Bidirectional streaming RPCs)：客户端和服务端都可以独立向对方发送或接受一系列的消息。客户端和服务端读写的顺序是任意。
+     * </pre>
      */
     public io.grpc.stub.StreamObserver<com.wangzunbin.proto.StreamRequest> biTalk(
         io.grpc.stub.StreamObserver<com.wangzunbin.proto.StreamResponse> responseObserver) {
       return io.grpc.stub.ServerCalls.asyncUnimplementedStreamingCall(getBiTalkMethod(), responseObserver);
     }
 
-    @Override public final io.grpc.ServerServiceDefinition bindService() {
+    @java.lang.Override public final io.grpc.ServerServiceDefinition bindService() {
       return io.grpc.ServerServiceDefinition.builder(getServiceDescriptor())
           .addMethod(
             getGetRealNameByUsernameMethod(),
@@ -268,13 +269,17 @@ public final class StudentServiceGrpc {
       super(channel, callOptions);
     }
 
-    @Override
+    @java.lang.Override
     protected StudentServiceStub build(
         io.grpc.Channel channel, io.grpc.CallOptions callOptions) {
       return new StudentServiceStub(channel, callOptions);
     }
 
     /**
+     * <pre>
+     * GRPC的4种方法调用形式
+     * 1. 一元RPC(Unary RPCs )：这是最简单的定义，客户端发送一个请求，服务端返回一个结果
+     * </pre>
      */
     public void getRealNameByUsername(com.wangzunbin.proto.MyRequest request,
         io.grpc.stub.StreamObserver<com.wangzunbin.proto.MyResponse> responseObserver) {
@@ -283,6 +288,9 @@ public final class StudentServiceGrpc {
     }
 
     /**
+     * <pre>
+     * 2. 服务器流RPC（Server streaming RPCs）：客户端发送一个请求，服务端返回一个流给客户端，客户从流中读取一系列消息，直到读取所有小心
+     * </pre>
      */
     public void getStudentsByAge(com.wangzunbin.proto.StudentRequest request,
         io.grpc.stub.StreamObserver<com.wangzunbin.proto.StudentResponse> responseObserver) {
@@ -291,6 +299,9 @@ public final class StudentServiceGrpc {
     }
 
     /**
+     * <pre>
+     * 3. 客户端流RPC(Client streaming RPCs )：客户端通过流向服务端发送一系列消息，然后等待服务端读取完数据并返回处理结果
+     * </pre>
      */
     public io.grpc.stub.StreamObserver<com.wangzunbin.proto.StudentRequest> getStudentsWrapperByAges(
         io.grpc.stub.StreamObserver<com.wangzunbin.proto.StudentResponseList> responseObserver) {
@@ -299,6 +310,9 @@ public final class StudentServiceGrpc {
     }
 
     /**
+     * <pre>
+     * 4. 双向流RPC(Bidirectional streaming RPCs)：客户端和服务端都可以独立向对方发送或接受一系列的消息。客户端和服务端读写的顺序是任意。
+     * </pre>
      */
     public io.grpc.stub.StreamObserver<com.wangzunbin.proto.StreamRequest> biTalk(
         io.grpc.stub.StreamObserver<com.wangzunbin.proto.StreamResponse> responseObserver) {
@@ -315,13 +329,17 @@ public final class StudentServiceGrpc {
       super(channel, callOptions);
     }
 
-    @Override
+    @java.lang.Override
     protected StudentServiceBlockingStub build(
         io.grpc.Channel channel, io.grpc.CallOptions callOptions) {
       return new StudentServiceBlockingStub(channel, callOptions);
     }
 
     /**
+     * <pre>
+     * GRPC的4种方法调用形式
+     * 1. 一元RPC(Unary RPCs )：这是最简单的定义，客户端发送一个请求，服务端返回一个结果
+     * </pre>
      */
     public com.wangzunbin.proto.MyResponse getRealNameByUsername(com.wangzunbin.proto.MyRequest request) {
       return io.grpc.stub.ClientCalls.blockingUnaryCall(
@@ -329,6 +347,9 @@ public final class StudentServiceGrpc {
     }
 
     /**
+     * <pre>
+     * 2. 服务器流RPC（Server streaming RPCs）：客户端发送一个请求，服务端返回一个流给客户端，客户从流中读取一系列消息，直到读取所有小心
+     * </pre>
      */
     public java.util.Iterator<com.wangzunbin.proto.StudentResponse> getStudentsByAge(
         com.wangzunbin.proto.StudentRequest request) {
@@ -345,13 +366,17 @@ public final class StudentServiceGrpc {
       super(channel, callOptions);
     }
 
-    @Override
+    @java.lang.Override
     protected StudentServiceFutureStub build(
         io.grpc.Channel channel, io.grpc.CallOptions callOptions) {
       return new StudentServiceFutureStub(channel, callOptions);
     }
 
     /**
+     * <pre>
+     * GRPC的4种方法调用形式
+     * 1. 一元RPC(Unary RPCs )：这是最简单的定义，客户端发送一个请求，服务端返回一个结果
+     * </pre>
      */
     public com.google.common.util.concurrent.ListenableFuture<com.wangzunbin.proto.MyResponse> getRealNameByUsername(
         com.wangzunbin.proto.MyRequest request) {
@@ -378,8 +403,8 @@ public final class StudentServiceGrpc {
       this.methodId = methodId;
     }
 
-    @Override
-    @SuppressWarnings("unchecked")
+    @java.lang.Override
+    @java.lang.SuppressWarnings("unchecked")
     public void invoke(Req request, io.grpc.stub.StreamObserver<Resp> responseObserver) {
       switch (methodId) {
         case METHODID_GET_REAL_NAME_BY_USERNAME:
@@ -395,8 +420,8 @@ public final class StudentServiceGrpc {
       }
     }
 
-    @Override
-    @SuppressWarnings("unchecked")
+    @java.lang.Override
+    @java.lang.SuppressWarnings("unchecked")
     public io.grpc.stub.StreamObserver<Req> invoke(
         io.grpc.stub.StreamObserver<Resp> responseObserver) {
       switch (methodId) {
@@ -416,12 +441,12 @@ public final class StudentServiceGrpc {
       implements io.grpc.protobuf.ProtoFileDescriptorSupplier, io.grpc.protobuf.ProtoServiceDescriptorSupplier {
     StudentServiceBaseDescriptorSupplier() {}
 
-    @Override
+    @java.lang.Override
     public com.google.protobuf.Descriptors.FileDescriptor getFileDescriptor() {
       return com.wangzunbin.proto.StudentProto.getDescriptor();
     }
 
-    @Override
+    @java.lang.Override
     public com.google.protobuf.Descriptors.ServiceDescriptor getServiceDescriptor() {
       return getFileDescriptor().findServiceByName("StudentService");
     }
@@ -441,7 +466,7 @@ public final class StudentServiceGrpc {
       this.methodName = methodName;
     }
 
-    @Override
+    @java.lang.Override
     public com.google.protobuf.Descriptors.MethodDescriptor getMethodDescriptor() {
       return getServiceDescriptor().findMethodByName(methodName);
     }

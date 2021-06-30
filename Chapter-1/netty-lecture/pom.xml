@@ -66,6 +66,11 @@
                     <protocArtifact>com.google.protobuf:protoc:3.12.0:exe:${os.detected.classifier}</protocArtifact>
                     <pluginId>grpc-java</pluginId>
                     <pluginArtifact>io.grpc:protoc-gen-grpc-java:1.38.0:exe:${os.detected.classifier}</pluginArtifact>
+<!--                    指定代码生成到 src 下-->
+                    <outputDirectory>${basedir}/src/main/java</outputDirectory>
+                    <clearOutputDirectory>false</clearOutputDirectory>
+<!--              proto的源文件      -->
+<!--                    <protoSourceRoot></protoSourceRoot>-->
                 </configuration>
                 <executions>
                     <execution>
