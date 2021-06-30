@@ -1709,5 +1709,180 @@ public class MyClientHandler extends SimpleChannelInboundHandler<String> {
    }
    ```
 
-5. 
+## 八、Java NIO系统
+
+   1. Java IO和Java NIO区别:
+
+      java.io中最为核心的一个概念是流（Stream），面向流的编程。java中，一个流要么是输入流，要目是输出流，不可能同时即是输入流又是输出流。
+
+      java.nio中有3个核心概念：Selector（选择器）,Channel（通道）与Buffer（缓冲区）。在java.nio中，我们是面向块（block）或是缓冲区（buffer）编程的。Buffer本身就是一块内存，底层实现上，它实际上是个数组。数据的读、写都是通过buffer来实现的。
+
+      除了数组之外，Buffer还提供了对于数据的结构化访问方式，并且可以追踪到系统的读写过程。
+
+      Java中8中原生数据类型都有各自对应的Buffer类型，例如IntBuffer，LongBuffer，ByteBuffer以及CharBuffer等。
+
+      Channel指的是可以向其写入数据或是从中读取数据的对象，它类似于java.io中的stream。
+
+      所有数据的读写都是通过Buffer来进行的，永远不会出现直接向Channel写入数据的情况，或是直接从Channel读取数据的情况。
+
+      与Stream不同的是，Channel是双向的，一个流只可能是InputStream或是OutPutStream，Channel打开后则可以进行读取、写入或者读写。
+
+      由于Channel是双向的，因此它能更好地反映出底层操作系统的真实情况；在Linux系统中，底层操作系统的通道就是双向的。
+
+      ![img](img\8-1.png)
+
+      1) 简单的读写:
+
+      ```java
+      public class NioTest1 {
+      
+          public static void main(String[] args) {
+              IntBuffer buffer = IntBuffer.allocate(10);
+      
+              System.out.println("capacity: " + buffer.capacity());
+      
+              for(int i = 0; i < 5; ++i) {
+                  int randomNumber = new SecureRandom().nextInt(20);
+                  buffer.put(randomNumber);
+              }
+      
+              System.out.println("before flip limit: " + buffer.limit());
+              //进行读写切换
+              buffer.flip();
+      
+              System.out.println("after flip limit: " + buffer.limit());
+      
+              System.out.println("enter while loop");
+      
+              while(buffer.hasRemaining()) {
+                  System.out.println("position: " + buffer.position());
+                  System.out.println("limit: " + buffer.limit());
+                  System.out.println("capacity: " + buffer.capacity());
+      
+                  System.out.println(buffer.get());
+              }
+          }
+      }
+      ```
+
+      2) 读取文件:
+
+      ```java
+      public class NioTest2 {
+      
+          public static void main(String[] args) throws Exception {
+      
+              FileInputStream fileInputStream = new FileInputStream("NioTest2.txt");
+              FileChannel fileChannel = fileInputStream.getChannel();
+      
+              ByteBuffer byteBuffer = ByteBuffer.allocate(512);
+              fileChannel.read(byteBuffer);
+      
+              byteBuffer.flip();
+      
+              while(byteBuffer.remaining() > 0) {
+                  byte b = byteBuffer.get();
+                  System.out.println("Character: " + (char)b);
+              }
+      
+              fileInputStream.close();
+          }
+      }
+      ```
+
+      3)  写入文件:
+
+      ```java
+      public class NioTest3 {
+      
+          public static void main(String[] args) throws Exception{
+              FileOutputStream fileOutputStream = new FileOutputStream("NioTest3.txt");
+              FileChannel fileChannel = fileOutputStream.getChannel();
+      
+              ByteBuffer byteBuffer = ByteBuffer.allocate(512);
+      
+              byte[] messages = "hello world welcome, nihao".getBytes();
+      
+              for(int i = 0; i < messages.length; ++i) {
+                  byteBuffer.put(messages[i]);
+              }
+      
+              byteBuffer.flip();
+      
+              fileChannel.write(byteBuffer);
+      
+              fileOutputStream.close();
+          }
+      }
+      ```
+
+      4) 把文件内容读入内存, 接着写入文件的操作:
+
+      ```java
+      public class NioTest4 {
+      
+          public static void main(String[] args) throws Exception {
+              FileInputStream inputStream = new FileInputStream("input.txt");
+              FileOutputStream outputStream = new FileOutputStream("output.txt");
+      
+              FileChannel inputChannel = inputStream.getChannel();
+              FileChannel outputChannel = outputStream.getChannel();
+      
+              ByteBuffer buffer = ByteBuffer.allocate(512);
+      
+              while(true) {
+                  //注释掉buffer.clear()后， 在while循环的最后一句outputChannel.write执行后
+                  // buffer的position等于limit，这样read返回为0
+                  // while循环无法结束，flip会导致每次把buffer的内容重复写入
+                  buffer.clear();
+      
+                  int read = inputChannel.read(buffer);
+      
+                  System.out.println("read: " + read);
+      
+                  if(-1 == read) {
+                      break;
+                  }
+      
+                  buffer.flip();
+      
+                  outputChannel.write(buffer);
+              }
+      
+              inputStream.close();
+              outputStream.close();
+          }
+      }
+      
+      ```
+
+      
+
+   2. 关于NIO Buffer中的3个重要状态属性的含义：position、limit、capacity。
+
+- 容量（Capacity）
+
+缓冲区能够容纳的数据元素的最大数量。这一容量在缓冲区创建时被设定，并且永远不能 被改变。
+
+- 上界（Limit）
+
+缓冲区的第一个不能被读或写的元素。或者说，缓冲区中现存元素的计数。
+
+- 位置（Position）
+
+下一个要被读或写的元素的索引。位置会自动由相应的 get( )和 put( )函数更新。
+
+- 标记（Mark）
+
+一个备忘位置。调用 mark( )来设定 mark = postion。调用 reset( )设定 position = mark。标记在设定前是未定义的(undefined)。
+ 这四个属性之间总是遵循以下关系： 0 <= mark <= position <= limit <= capacity
+ 调用api的过程中，position、limit、capacity的变化：
+
+![image-20210630233802378](img\8-2.png)
+
+![image-20210630233831959](img\8-3.png)
+
+![image-20210630233859693](img\8-4.png)
+
+
 
