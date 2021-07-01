@@ -26,8 +26,10 @@ public class NioTest6 {
             sliceBuffer.put(i, b);
         }
 
-        buffer.position(0);
-        buffer.limit(buffer.capacity());
+//        buffer.position(0);
+//        buffer.limit(buffer.capacity());
+        // 链式调用
+        buffer.position(0).limit(buffer.capacity());
 
         while(buffer.hasRemaining()) {
             System.out.println(buffer.get());

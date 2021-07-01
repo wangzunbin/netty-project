@@ -21,6 +21,7 @@ public class NioTest7 {
 
         ByteBuffer readonlyBuffer = buffer.asReadOnlyBuffer();
 
+        // HeapByteBufferR 后面的R是read的意思, 只读的意思
         System.out.println(readonlyBuffer.getClass());
 
         readonlyBuffer.position(0);

@@ -21,10 +21,15 @@ public class NioTest5 {
         buffer.flip();
 
         System.out.println(buffer.getInt());
+        System.out.println("---" + buffer.position());
         System.out.println(buffer.getLong());
+        System.out.println("---" + buffer.position());
         System.out.println(buffer.getDouble());
+        System.out.println("---" + buffer.position());
         System.out.println(buffer.getChar());
+        System.out.println("---" + buffer.position());
         System.out.println(buffer.getShort());
+        System.out.println("---" + buffer.position());
         System.out.println(buffer.getChar());
     }
 }

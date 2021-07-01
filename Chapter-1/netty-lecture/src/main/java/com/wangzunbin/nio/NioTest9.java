@@ -5,6 +5,9 @@ import java.io.RandomAccessFile;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 
+/**
+ * 把文件映射的内存操作读写(堆外内存)
+ */
 public class NioTest9 {
 
     public static void main(String[] args) throws Exception {

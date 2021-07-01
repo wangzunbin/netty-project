@@ -1884,5 +1884,170 @@ public class MyClientHandler extends SimpleChannelInboundHandler<String> {
 
 ![image-20210630233859693](img\8-4.png)
 
+ 3. ByteBuffer的一些操作:
 
+    1) ByteBuffer类型化的put与get方法:
+
+    ```java
+    public class NioTest5 {
+    
+        public static void main(String[] args) {
+            ByteBuffer buffer = ByteBuffer.allocate(64);
+    
+            buffer.putInt(15);
+            buffer.putLong(500000000L);
+            buffer.putDouble(14.123456);
+            buffer.putChar('你');
+            buffer.putShort((short)2);
+            buffer.putChar('我');
+    
+            buffer.flip();
+    
+            System.out.println(buffer.getInt());
+            System.out.println("---" + buffer.position());
+            System.out.println(buffer.getLong());
+            System.out.println("---" + buffer.position());
+            System.out.println(buffer.getDouble());
+            System.out.println("---" + buffer.position());
+            System.out.println(buffer.getChar());
+            System.out.println("---" + buffer.position());
+            System.out.println(buffer.getShort());
+            System.out.println("---" + buffer.position());
+            System.out.println(buffer.getChar());
+        }
+    }
+    
+    ```
+
+    2) Slice Buffer与原有buffer共享相同的底层数组:
+
+    ```java
+    public class NioTest6 {
+    
+        public static void main(String[] args) {
+            ByteBuffer buffer = ByteBuffer.allocate(10);
+    
+            for(int i = 0; i < buffer.capacity(); ++i) {
+                buffer.put((byte)i);
+            }
+    
+            buffer.position(2);
+            buffer.limit(6);
+    
+            ByteBuffer sliceBuffer = buffer.slice();
+    
+            for(int i = 0; i < sliceBuffer.capacity(); ++i) {
+                byte b = sliceBuffer.get(i);
+                b *= 2;
+                sliceBuffer.put(i, b);
+            }
+    
+    //        buffer.position(0);
+    //        buffer.limit(buffer.capacity());
+            // 链式调用
+            buffer.position(0).limit(buffer.capacity());
+    
+            while(buffer.hasRemaining()) {
+                System.out.println(buffer.get());
+            }
+        }
+    }
+    ```
+
+    IDEA小提示(按下tab键, 覆盖之前的操作):
+
+    ![](img\8-5.gif)
+
+    3) 只读buffer:
+
+    ```java
+    /**
+     * 只读buffer，我们可以随时将一个普通Buffer调用asReadOnlyBuffer方法返回一个只读Buffer
+     * 但不能将一个只读Buffer转换为读写Buffer
+     */
+    
+    public class NioTest7 {
+    
+        public static void main(String[] args) {
+            ByteBuffer buffer = ByteBuffer.allocate(10);
+    
+            System.out.println(buffer.getClass());
+    
+            for (int i = 0; i < buffer.capacity(); ++i) {
+                buffer.put((byte)i);
+            }
+    
+            ByteBuffer readonlyBuffer = buffer.asReadOnlyBuffer();
+            
+            // HeapByteBufferR 后面的R是read的意思, 只读的意思
+            System.out.println(readonlyBuffer.getClass());
+    
+            readonlyBuffer.position(0);
+    
+    //        readonlyBuffer.put((byte)2);
+        }
+    }
+    
+    ```
+
+ 4. DirectByteBuffer的好处:
+
+    堆内存:  https://juejin.cn/post/6844903710766661639
+
+    ```java
+    public class NioTest8 {
+    
+        public static void main(String[] args) throws Exception {
+            FileInputStream inputStream = new FileInputStream("input2.txt");
+            FileOutputStream outputStream = new FileOutputStream("output2.txt");
+    
+            FileChannel inputChannel = inputStream.getChannel();
+            FileChannel outputChannel = outputStream.getChannel();
+    
+            ByteBuffer buffer = ByteBuffer.allocateDirect(512);
+    
+            while(true) {
+                buffer.clear();
+    
+                int read = inputChannel.read(buffer);
+    
+                System.out.println("read: " + read);
+    
+                if(-1 == read) {
+                    break;
+                }
+    
+                buffer.flip();
+    
+                outputChannel.write(buffer);
+            }
+    
+            inputChannel.close();
+            outputChannel.close();
+        }
+    }
+    
+    ```
+
+    ```java
+    /**
+     * 把文件映射的内存操作读写(堆外内存)
+     */
+    public class NioTest9 {
+    
+        public static void main(String[] args) throws Exception {
+            RandomAccessFile randomAccessFile = new RandomAccessFile("NioTest9.txt", "rw");
+            FileChannel fileChannel = randomAccessFile.getChannel();
+    
+            MappedByteBuffer mappedByteBuffer = fileChannel.map(FileChannel.MapMode.READ_WRITE, 0, 5);
+    
+            mappedByteBuffer.put(0, (byte)'a');
+            mappedByteBuffer.put(3, (byte)'b');
+    
+            randomAccessFile.close();
+        }
+    }
+    ```
+
+ 5. 
 
