@@ -2049,5 +2049,96 @@ public class MyClientHandler extends SimpleChannelInboundHandler<String> {
     }
     ```
 
- 5. 
+ 5. Buffer的Scattering与Gathering操作
+
+    1) Buffer的Scattering与Gathering的应用场景: http请求从客户端发给服务端, 请求头, 请求体等等一些信息会存储到固定长度的ByteBuffer当中;
+
+    2) 服务器代码:
+
+    ```java
+    public class NioTest11 {
+    
+        public static void main(String[] args) throws Exception {
+            ServerSocketChannel serverSocketChannel = ServerSocketChannel.open();
+            InetSocketAddress address = new InetSocketAddress(8899);
+            serverSocketChannel.socket().bind(address);
+    
+            int messageLength = 2 + 3 + 4;
+    
+            ByteBuffer[] buffers = new ByteBuffer[3];
+    
+            buffers[0] = ByteBuffer.allocate(2);
+            buffers[1] = ByteBuffer.allocate(3);
+            buffers[2] = ByteBuffer.allocate(4);
+    
+            // 从channel获取数据, accept阻塞的方法, 一直获取客户端发数据过来
+            SocketChannel socketChannel = serverSocketChannel.accept();
+    
+            while (true) {
+                int bytesRead = 0;
+    
+                while (bytesRead < messageLength) {
+                    long r = socketChannel.read(buffers);
+                    bytesRead += r;
+    
+                    System.out.println("bytesRead: " + bytesRead);
+    
+                    Arrays.asList(buffers).stream().
+                            map(buffer -> "position: " + buffer.position() + ", limit: " + buffer.limit()).
+                            forEach(System.out::println);
+                }
+    
+                Arrays.asList(buffers).forEach(buffer -> {
+                    buffer.flip();
+                });
+    
+                long bytesWritten = 0;
+                while (bytesWritten < messageLength) {
+                    long r = socketChannel.write(buffers);
+                    bytesWritten += r;
+                }
+    
+                Arrays.asList(buffers).forEach(buffer -> {
+                    buffer.clear();
+                });
+    
+                System.out.println("bytesRead: " + bytesRead + ", bytesWritten: " + bytesWritten + ", messageLength: " + messageLength);
+            }
+        }
+    }
+    
+    ```
+
+ 6. Selector源码深入分析:
+
+    1) 传统的socket编程:
+
+    public class Server {
+
+    ```java
+    public void listener(int port) {
+    	ServerSocket server = null;
+    	try {
+    		server = new ServerSocket(port);
+    		System.out.println("server start  port " + port + " ... ");
+    		// 进行阻塞,用于接收客户端的请求
+    		while (true) {
+    			Socket socket = server.accept();
+    			// 新建一个线程执行客户端的任务
+    			new Thread(new ServerHandler(socket)).start();
+    		}
+    	} catch (Exception e) {
+    		e.printStackTrace();
+    	}
+     
+    	// 开启服务器
+    	public static void main(String[] args) {
+    		new Server().listener(8338);
+    	}
+    }
+    ```
+
+    ![clipboard.png](img\8-6.png)
+
+ 7. 
 

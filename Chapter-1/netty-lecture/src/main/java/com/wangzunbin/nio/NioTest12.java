@@ -11,6 +11,7 @@ import java.nio.channels.SocketChannel;
 import java.util.Iterator;
 import java.util.Set;
 
+// NIO的三大组件Selector
 public class NioTest12 {
 
     public static void main(String[] args) throws Exception {
