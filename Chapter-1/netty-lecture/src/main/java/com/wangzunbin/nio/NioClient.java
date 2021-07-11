@@ -32,6 +32,7 @@ public class NioClient {
                     if (selectionKey.isConnectable()) {
                         SocketChannel client = (SocketChannel) selectionKey.channel();
 
+                        // 如果是准备连接, 需要调用完成连接, 才能进行下一步
                         if (client.isConnectionPending()) {
                             client.finishConnect();
 

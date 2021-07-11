@@ -50,6 +50,7 @@ public class NioTest12 {
             while (iter.hasNext()) {
                 SelectionKey selectionKey = iter.next();
 
+                // 判断有没有可用的连接
                 if (selectionKey.isAcceptable()) {
                     ServerSocketChannel serverSocketChannel = (ServerSocketChannel) selectionKey.channel();
                     SocketChannel socketChannel = serverSocketChannel.accept();
@@ -60,6 +61,7 @@ public class NioTest12 {
                     iter.remove();
 
                     System.out.println("获得客户端连接： " + socketChannel);
+                    // 判断有没有可读的数据
                 } else if (selectionKey.isReadable()) {
                     SocketChannel socketChannel = (SocketChannel) selectionKey.channel();
 
